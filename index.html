@@ -73,7 +73,7 @@
             </div>
             <div class="header-right">
                 <div class="controls">
-                    <button id="runBtn" class="btn btn-run">▶ Run</button>
+                    <button id="runBtn" class="btn btn-run" disabled>▶ Run</button>
                     <button id="stopBtn" class="btn btn-stop" disabled>⏹ Stop</button>
                     <button id="debugBtn" class="btn btn-debug">🐛 Debug</button>
                     <select id="pythonVersion" class="select">
@@ -128,9 +128,9 @@
                         <input type="text" id="packageInput" placeholder="Package name...">
                         <button onclick="editor.installPackage()">Install</button>
                         <div class="installed-packages" id="installedPackages">
-                            <div>numpy - 1.24.0</div>
-                            <div>matplotlib - 3.7.0</div>
-                            <div>pandas - 2.0.0</div>
+                            <div>✅ numpy - 1.24.0</div>
+                            <div>✅ matplotlib - 3.7.0</div>
+                            <div>✅ pandas - 2.0.0</div>
                         </div>
                     </div>
                 </div>
@@ -164,25 +164,28 @@
 
 print('Hello, World!')
 
-# Example: Data analysis
-import numpy as np
-import matplotlib.pyplot as plt
+# Example: Simple calculations
+import math
 
-# Generate sample data
-x = np.linspace(0, 10, 100)
-y = np.sin(x)
+def calculate_circle_area(radius):
+    return math.pi * radius ** 2
 
-# Create a simple plot
-plt.figure(figsize=(10, 6))
-plt.plot(x, y, 'b-', linewidth=2, label='sin(x)')
-plt.xlabel('x')
-plt.ylabel('y')
-plt.title('Sine Wave')
-plt.legend()
-plt.grid(True)
-plt.show()
+radius = 5
+area = calculate_circle_area(radius)
+print(f'Circle with radius {radius} has area: {area:.2f}')
 
-print('Plot created successfully!')"></textarea>
+# Example: Working with lists
+numbers = [1, 2, 3, 4, 5]
+squared = [x**2 for x in numbers]
+print(f'Original: {numbers}')
+print(f'Squared: {squared}')
+
+# Example: Simple data analysis
+data = [10, 20, 30, 40, 50]
+average = sum(data) / len(data)
+print(f'Average: {average}')
+
+print('Ready to code! Press Ctrl+Enter to run.')"></textarea>
                             <div class="code-overlay" id="codeOverlay"></div>
                         </div>
                         <div class="minimap" id="minimap"></div>
@@ -223,9 +226,9 @@ print('Plot created successfully!')"></textarea>
                     
                     <div class="output-panel" id="problems">
                         <div id="problemsList">
-                            <div class="problem-item warning">
-                                <span class="problem-icon">⚠️</span>
-                                <span>Line 5: Unused variable 'temp'</span>
+                            <div class="problem-item info">
+                                <span class="problem-icon">ℹ️</span>
+                                <span>No problems detected</span>
                             </div>
                         </div>
                     </div>
@@ -236,7 +239,7 @@ print('Plot created successfully!')"></textarea>
                             <button class="debug-btn">Step Into</button>
                             <button class="debug-btn">Continue</button>
                         </div>
-                        <div id="debugOutput"></div>
+                        <div id="debugOutput">Debug mode ready...</div>
                     </div>
                 </div>
             </div>
