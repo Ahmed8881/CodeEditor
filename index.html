@@ -3,68 +3,324 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python Code Editor</title>
+    <title>Advanced Python Code Editor</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <h1>Python Code Editor</h1>
-            <div class="controls">
-                <button id="runBtn" class="btn btn-primary">Run Code</button>
-                <button id="clearBtn" class="btn btn-secondary">Clear</button>
-                <button id="saveBtn" class="btn btn-secondary">Save</button>
-                <input type="file" id="loadBtn" accept=".py" style="display: none;">
-                <button onclick="document.getElementById('loadBtn').click()" class="btn btn-secondary">Load</button>
-            </div>
-        </header>
-        
-        <div class="editor-container">
-            <div class="editor-panel">
-                <div class="panel-header">
-                    <span>Code Editor</span>
-                    <div class="editor-controls">
-                        <select id="fontSize">
-                            <option value="12">12px</option>
-                            <option value="14" selected>14px</option>
-                            <option value="16">16px</option>
-                            <option value="18">18px</option>
-                        </select>
+        <!-- Top Menu Bar -->
+        <div class="menu-bar">
+            <div class="menu-section">
+                <div class="menu-item dropdown">
+                    <span>File</span>
+                    <div class="dropdown-content">
+                        <div onclick="editor.newFile()">New File</div>
+                        <div onclick="document.getElementById('loadBtn').click()">Open File</div>
+                        <div onclick="editor.saveFile()">Save File</div>
+                        <div onclick="editor.saveAsFile()">Save As...</div>
+                        <hr>
+                        <div onclick="editor.exportHTML()">Export as HTML</div>
                     </div>
                 </div>
-                <div class="code-editor">
-                    <div class="line-numbers" id="lineNumbers"></div>
-                    <textarea id="codeInput" placeholder="# Write your Python code here
+                <div class="menu-item dropdown">
+                    <span>Edit</span>
+                    <div class="dropdown-content">
+                        <div onclick="editor.undo()">Undo</div>
+                        <div onclick="editor.redo()">Redo</div>
+                        <hr>
+                        <div onclick="editor.selectAll()">Select All</div>
+                        <div onclick="editor.findReplace()">Find & Replace</div>
+                    </div>
+                </div>
+                <div class="menu-item dropdown">
+                    <span>View</span>
+                    <div class="dropdown-content">
+                        <div onclick="editor.toggleTheme()">Toggle Theme</div>
+                        <div onclick="editor.toggleMinimap()">Toggle Minimap</div>
+                        <div onclick="editor.toggleWordWrap()">Toggle Word Wrap</div>
+                        <div onclick="editor.toggleFullscreen()">Fullscreen</div>
+                    </div>
+                </div>
+                <div class="menu-item dropdown">
+                    <span>Tools</span>
+                    <div class="dropdown-content">
+                        <div onclick="editor.formatCode()">Format Code</div>
+                        <div onclick="editor.showPackageManager()">Package Manager</div>
+                        <div onclick="editor.showSnippets()">Code Snippets</div>
+                        <div onclick="editor.showSettings()">Settings</div>
+                    </div>
+                </div>
+            </div>
+            <div class="menu-section">
+                <div class="logo">🐍 PyEditor Pro</div>
+            </div>
+        </div>
+
+        <!-- Main Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="tab-container" id="tabContainer">
+                    <div class="tab active" data-file="main.py">
+                        <span class="tab-name">main.py</span>
+                        <span class="tab-close" onclick="editor.closeTab(this)">&times;</span>
+                    </div>
+                    <button class="new-tab-btn" onclick="editor.newTab()">+</button>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="controls">
+                    <button id="runBtn" class="btn btn-run">▶ Run</button>
+                    <button id="stopBtn" class="btn btn-stop" disabled>⏹ Stop</button>
+                    <button id="debugBtn" class="btn btn-debug">🐛 Debug</button>
+                    <select id="pythonVersion" class="select">
+                        <option value="3.11">Python 3.11</option>
+                        <option value="3.10">Python 3.10</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-tabs">
+                    <div class="sidebar-tab active" data-panel="explorer">📁</div>
+                    <div class="sidebar-tab" data-panel="search">🔍</div>
+                    <div class="sidebar-tab" data-panel="git">🌿</div>
+                    <div class="sidebar-tab" data-panel="packages">📦</div>
+                </div>
+                
+                <div class="sidebar-content">
+                    <div class="sidebar-panel active" id="explorer">
+                        <h3>Explorer</h3>
+                        <div class="file-tree" id="fileTree">
+                            <div class="file-item active" data-file="main.py">📄 main.py</div>
+                        </div>
+                        <button class="btn-small" onclick="editor.newFile()">New File</button>
+                    </div>
+                    
+                    <div class="sidebar-panel" id="search">
+                        <h3>Search & Replace</h3>
+                        <input type="text" id="searchInput" placeholder="Search...">
+                        <input type="text" id="replaceInput" placeholder="Replace...">
+                        <div class="search-buttons">
+                            <button onclick="editor.findNext()">Find Next</button>
+                            <button onclick="editor.replaceAll()">Replace All</button>
+                        </div>
+                    </div>
+                    
+                    <div class="sidebar-panel" id="git">
+                        <h3>Version Control</h3>
+                        <div class="git-status">
+                            <div>📝 Modified: 1 file</div>
+                            <div>✅ Staged: 0 files</div>
+                        </div>
+                        <button class="btn-small">Commit Changes</button>
+                    </div>
+                    
+                    <div class="sidebar-panel" id="packages">
+                        <h3>Package Manager</h3>
+                        <input type="text" id="packageInput" placeholder="Package name...">
+                        <button onclick="editor.installPackage()">Install</button>
+                        <div class="installed-packages" id="installedPackages">
+                            <div>numpy - 1.24.0</div>
+                            <div>matplotlib - 3.7.0</div>
+                            <div>pandas - 2.0.0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editor Area -->
+            <div class="editor-area">
+                <div class="editor-container">
+                    <div class="editor-header">
+                        <div class="breadcrumb">
+                            <span>📁 Project</span> / <span class="current-file">main.py</span>
+                        </div>
+                        <div class="editor-tools">
+                            <select id="fontSize">
+                                <option value="12">12px</option>
+                                <option value="14" selected>14px</option>
+                                <option value="16">16px</option>
+                                <option value="18">18px</option>
+                                <option value="20">20px</option>
+                            </select>
+                            <button class="tool-btn" onclick="editor.toggleMinimap()" title="Toggle Minimap">🗺️</button>
+                            <button class="tool-btn" onclick="editor.toggleWordWrap()" title="Toggle Word Wrap">📄</button>
+                        </div>
+                    </div>
+                    
+                    <div class="code-editor-wrapper">
+                        <div class="line-numbers" id="lineNumbers"></div>
+                        <div class="code-editor">
+                            <textarea id="codeInput" spellcheck="false" placeholder="# Welcome to PyEditor Pro!
+# Start coding your Python project here
+
 print('Hello, World!')
 
-# Example: Simple calculator
-def add(a, b):
-    return a + b
+# Example: Data analysis
+import numpy as np
+import matplotlib.pyplot as plt
 
-result = add(5, 3)
-print(f'5 + 3 = {result}')"></textarea>
+# Generate sample data
+x = np.linspace(0, 10, 100)
+y = np.sin(x)
+
+# Create a simple plot
+plt.figure(figsize=(10, 6))
+plt.plot(x, y, 'b-', linewidth=2, label='sin(x)')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('Sine Wave')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+print('Plot created successfully!')"></textarea>
+                            <div class="code-overlay" id="codeOverlay"></div>
+                        </div>
+                        <div class="minimap" id="minimap"></div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="output-panel">
-                <div class="panel-header">
-                    <span>Output</span>
-                    <button id="clearOutput" class="btn-small">Clear Output</button>
+
+            <!-- Output Panel -->
+            <div class="output-area">
+                <div class="output-tabs">
+                    <div class="output-tab active" data-panel="console">Console</div>
+                    <div class="output-tab" data-panel="terminal">Terminal</div>
+                    <div class="output-tab" data-panel="problems">Problems</div>
+                    <div class="output-tab" data-panel="debug">Debug</div>
                 </div>
-                <div id="output" class="output-content"></div>
-                <div id="loading" class="loading hidden">
-                    <div class="spinner"></div>
-                    <span>Loading Python environment...</span>
+                
+                <div class="output-content">
+                    <div class="output-panel active" id="console">
+                        <div class="output-header">
+                            <span>Python Console</span>
+                            <div class="output-controls">
+                                <button onclick="editor.clearConsole()">Clear</button>
+                                <button onclick="editor.downloadOutput()">Download</button>
+                            </div>
+                        </div>
+                        <div id="output" class="console-output"></div>
+                    </div>
+                    
+                    <div class="output-panel" id="terminal">
+                        <div class="terminal-content">
+                            <div id="terminalOutput"></div>
+                            <div class="terminal-input">
+                                <span class="prompt">>>> </span>
+                                <input type="text" id="terminalInput" placeholder="Enter Python command...">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="output-panel" id="problems">
+                        <div id="problemsList">
+                            <div class="problem-item warning">
+                                <span class="problem-icon">⚠️</span>
+                                <span>Line 5: Unused variable 'temp'</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="output-panel" id="debug">
+                        <div class="debug-controls">
+                            <button class="debug-btn">Step Over</button>
+                            <button class="debug-btn">Step Into</button>
+                            <button class="debug-btn">Continue</button>
+                        </div>
+                        <div id="debugOutput"></div>
+                    </div>
                 </div>
             </div>
         </div>
-        
+
+        <!-- Status Bar -->
         <div class="status-bar">
-            <span id="status">Ready</span>
-            <span id="lineCol">Line 1, Column 1</span>
+            <div class="status-left">
+                <span id="status">Ready</span>
+                <span class="separator">|</span>
+                <span id="lineCol">Line 1, Column 1</span>
+                <span class="separator">|</span>
+                <span id="fileSize">0 bytes</span>
+            </div>
+            <div class="status-right">
+                <span id="encoding">UTF-8</span>
+                <span class="separator">|</span>
+                <span id="language">Python</span>
+                <span class="separator">|</span>
+                <span id="pyodideStatus">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="loading-content">
+                <div class="spinner-large"></div>
+                <h3>Loading Python Environment</h3>
+                <p id="loadingText">Initializing Pyodide...</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Settings</h3>
+                    <span class="modal-close" onclick="editor.closeModal('settingsModal')">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-group">
+                        <label>Theme:</label>
+                        <select id="themeSelect">
+                            <option value="dark">Dark</option>
+                            <option value="light">Light</option>
+                            <option value="monokai">Monokai</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label>Font Family:</label>
+                        <select id="fontFamily">
+                            <option value="Consolas">Consolas</option>
+                            <option value="Monaco">Monaco</option>
+                            <option value="Fira Code">Fira Code</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label>Auto Save:</label>
+                        <input type="checkbox" id="autoSave" checked>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="snippetsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Code Snippets</h3>
+                    <span class="modal-close" onclick="editor.closeModal('snippetsModal')">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="snippet-list" id="snippetList">
+                        <!-- Snippets will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="loadBtn" accept=".py,.txt" style="display: none;" multiple>
     
     <script src="main.js"></script>
 </body>
