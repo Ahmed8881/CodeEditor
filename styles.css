@@ -204,8 +204,13 @@ body {
     color: white;
 }
 
-.btn-run:hover {
+.btn-run:hover:not(:disabled) {
     background-color: #3ea889;
+}
+
+.btn-run:disabled {
+    background-color: #666;
+    cursor: not-allowed;
 }
 
 .btn-stop {
@@ -374,7 +379,7 @@ body {
 
 .installed-packages div {
     padding: 2px 0;
-    color: var(--text-muted);
+    color: var(--accent-green);
 }
 
 /* Editor Area */
@@ -652,6 +657,10 @@ body {
     color: var(--accent-red);
 }
 
+.problem-item.info {
+    color: var(--accent-blue);
+}
+
 /* Debug Panel */
 .debug-controls {
     padding: 10px;
@@ -822,19 +831,48 @@ body {
     font-size: 13px;
 }
 
-/* Syntax Highlighting */
-.hljs-keyword { color: #569cd6; }
-.hljs-string { color: #ce9178; }
-.hljs-comment { color: #6a9955; }
-.hljs-number { color: #b5cea8; }
-.hljs-built_in { color: #4ec9b0; }
-.hljs-function { color: #dcdcaa; }
-
 /* Output Styling */
 .output-success { color: var(--accent-green); }
 .output-error { color: var(--accent-red); }
 .output-warning { color: var(--accent-yellow); }
 .output-info { color: var(--accent-blue); }
+
+/* Snippet Styles */
+.snippet-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.snippet-item {
+    margin-bottom: 16px;
+    padding: 12px;
+    background-color: var(--bg-tertiary);
+    border-radius: 4px;
+}
+
+.snippet-item h4 {
+    margin-bottom: 8px;
+    color: var(--accent-blue);
+}
+
+.snippet-item pre {
+    background-color: var(--bg-primary);
+    padding: 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    margin-bottom: 8px;
+    overflow-x: auto;
+}
+
+.snippet-item button {
+    background-color: var(--accent-green);
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+}
 
 /* Responsive Design */
 @media (max-width: 1024px) {
