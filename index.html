@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Code Editor</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Python Code Editor</h1>
+            <div class="controls">
+                <button id="runBtn" class="btn btn-primary">Run Code</button>
+                <button id="clearBtn" class="btn btn-secondary">Clear</button>
+                <button id="saveBtn" class="btn btn-secondary">Save</button>
+                <input type="file" id="loadBtn" accept=".py" style="display: none;">
+                <button onclick="document.getElementById('loadBtn').click()" class="btn btn-secondary">Load</button>
+            </div>
+        </header>
+        
+        <div class="editor-container">
+            <div class="editor-panel">
+                <div class="panel-header">
+                    <span>Code Editor</span>
+                    <div class="editor-controls">
+                        <select id="fontSize">
+                            <option value="12">12px</option>
+                            <option value="14" selected>14px</option>
+                            <option value="16">16px</option>
+                            <option value="18">18px</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="code-editor">
+                    <div class="line-numbers" id="lineNumbers"></div>
+                    <textarea id="codeInput" placeholder="# Write your Python code here
+print('Hello, World!')
+
+# Example: Simple calculator
+def add(a, b):
+    return a + b
+
+result = add(5, 3)
+print(f'5 + 3 = {result}')"></textarea>
+                </div>
+            </div>
+            
+            <div class="output-panel">
+                <div class="panel-header">
+                    <span>Output</span>
+                    <button id="clearOutput" class="btn-small">Clear Output</button>
+                </div>
+                <div id="output" class="output-content"></div>
+                <div id="loading" class="loading hidden">
+                    <div class="spinner"></div>
+                    <span>Loading Python environment...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <span id="status">Ready</span>
+            <span id="lineCol">Line 1, Column 1</span>
+        </div>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>
