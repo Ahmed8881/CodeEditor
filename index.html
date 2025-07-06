@@ -3,11 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Python Code Editor</title>
+    <title>Fast Python Code Editor</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
 </head>
 <body>
@@ -56,7 +53,7 @@
                 </div>
             </div>
             <div class="menu-section">
-                <div class="logo">🐍 PyEditor Pro</div>
+                <div class="logo">⚡ FastPy Editor</div>
             </div>
         </div>
 
@@ -78,7 +75,6 @@
                     <button id="debugBtn" class="btn btn-debug">🐛 Debug</button>
                     <select id="pythonVersion" class="select">
                         <option value="3.11">Python 3.11</option>
-                        <option value="3.10">Python 3.10</option>
                     </select>
                 </div>
             </div>
@@ -91,7 +87,6 @@
                 <div class="sidebar-tabs">
                     <div class="sidebar-tab active" data-panel="explorer">📁</div>
                     <div class="sidebar-tab" data-panel="search">🔍</div>
-                    <div class="sidebar-tab" data-panel="git">🌿</div>
                     <div class="sidebar-tab" data-panel="packages">📦</div>
                 </div>
                 
@@ -114,23 +109,15 @@
                         </div>
                     </div>
                     
-                    <div class="sidebar-panel" id="git">
-                        <h3>Version Control</h3>
-                        <div class="git-status">
-                            <div>📝 Modified: 1 file</div>
-                            <div>✅ Staged: 0 files</div>
-                        </div>
-                        <button class="btn-small">Commit Changes</button>
-                    </div>
-                    
                     <div class="sidebar-panel" id="packages">
                         <h3>Package Manager</h3>
                         <input type="text" id="packageInput" placeholder="Package name...">
                         <button onclick="editor.installPackage()">Install</button>
+                        <div class="package-info">
+                            <small>Popular packages: numpy, matplotlib, pandas, requests</small>
+                        </div>
                         <div class="installed-packages" id="installedPackages">
-                            <div>✅ numpy - 1.24.0</div>
-                            <div>✅ matplotlib - 3.7.0</div>
-                            <div>✅ pandas - 2.0.0</div>
+                            <div class="package-status">Ready to install packages...</div>
                         </div>
                     </div>
                 </div>
@@ -159,34 +146,30 @@
                     <div class="code-editor-wrapper">
                         <div class="line-numbers" id="lineNumbers"></div>
                         <div class="code-editor">
-                            <textarea id="codeInput" spellcheck="false" placeholder="# Welcome to PyEditor Pro!
-# Start coding your Python project here
+                            <textarea id="codeInput" spellcheck="false" placeholder="# Welcome to FastPy Editor!
+# Lightning fast Python in your browser
 
 print('Hello, World!')
 
-# Example: Simple calculations
-import math
+# Basic calculations
+x = 10
+y = 20
+result = x + y
+print(f'{x} + {y} = {result}')
 
-def calculate_circle_area(radius):
-    return math.pi * radius ** 2
-
-radius = 5
-area = calculate_circle_area(radius)
-print(f'Circle with radius {radius} has area: {area:.2f}')
-
-# Example: Working with lists
+# Working with lists
 numbers = [1, 2, 3, 4, 5]
-squared = [x**2 for x in numbers]
-print(f'Original: {numbers}')
+squared = [n**2 for n in numbers]
+print(f'Numbers: {numbers}')
 print(f'Squared: {squared}')
 
-# Example: Simple data analysis
-data = [10, 20, 30, 40, 50]
-average = sum(data) / len(data)
-print(f'Average: {average}')
+# Simple function
+def greet(name):
+    return f'Hello, {name}!'
 
-print('Ready to code! Press Ctrl+Enter to run.')"></textarea>
-                            <div class="code-overlay" id="codeOverlay"></div>
+print(greet('Python Developer'))
+
+# Ready to code! Press Ctrl+Enter to run."></textarea>
                         </div>
                         <div class="minimap" id="minimap"></div>
                     </div>
@@ -198,7 +181,6 @@ print('Ready to code! Press Ctrl+Enter to run.')"></textarea>
                 <div class="output-tabs">
                     <div class="output-tab active" data-panel="console">Console</div>
                     <div class="output-tab" data-panel="terminal">Terminal</div>
-                    <div class="output-tab" data-panel="problems">Problems</div>
                     <div class="output-tab" data-panel="debug">Debug</div>
                 </div>
                 
@@ -220,15 +202,6 @@ print('Ready to code! Press Ctrl+Enter to run.')"></textarea>
                             <div class="terminal-input">
                                 <span class="prompt">>>> </span>
                                 <input type="text" id="terminalInput" placeholder="Enter Python command...">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="output-panel" id="problems">
-                        <div id="problemsList">
-                            <div class="problem-item info">
-                                <span class="problem-icon">ℹ️</span>
-                                <span>No problems detected</span>
                             </div>
                         </div>
                     </div>
@@ -263,14 +236,17 @@ print('Ready to code! Press Ctrl+Enter to run.')"></textarea>
             </div>
         </div>
 
-        <!-- Loading Overlay -->
+        <!-- Fast Loading Overlay -->
         <div id="loadingOverlay" class="loading-overlay">
             <div class="loading-content">
-                <div class="spinner-large"></div>
-                <h3>Loading Python Environment</h3>
-                <p id="loadingText">Initializing Pyodide...</p>
+                <div class="fast-spinner"></div>
+                <h3>⚡ Loading Python Environment</h3>
+                <p id="loadingText">Initializing...</p>
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="loading-tip">
+                    <small>💡 Tip: Packages load on-demand for faster startup!</small>
                 </div>
             </div>
         </div>
