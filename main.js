@@ -129,30 +129,30 @@ class AdvancedPythonEditor {
 
     async loadPyodide() {
         try {
-            const { loadPyodide } = await import('https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js');
             this.loadingOverlay.style.display = 'flex';
             this.updateLoadingProgress(0, 'Initializing Pyodide...');
             
+            // Use the global loadPyodide function
             this.pyodide = await loadPyodide({
-                indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/",
-                stdout: (text) => this.appendOutput(text, 'output-info'),
-                stderr: (text) => this.appendOutput(text, 'output-error')
+                indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"
             });
             
             this.updateLoadingProgress(30, 'Loading standard packages...');
             
             // Load common packages
-            await this.pyodide.loadPackage(['numpy', 'matplotlib', 'pandas', 'scipy']);
-            
-            this.updateLoadingProgress(60, 'Setting up environment...');
+            try {
+                await this.pyodide.loadPackage(['numpy', 'matplotlib', 'pandas']);
+                this.updateLoadingProgress(60, 'Setting up environment...');
+            } catch (packageError) {
+                console.warn('Some packages failed to load:', packageError);
+                this.updateLoadingProgress(60, 'Setting up basic environment...');
+            }
             
             // Setup Python environment
             this.pyodide.runPython(`
                 import sys
                 import io
-                import contextlib
                 import traceback
-                from js import console
                 
                 class OutputCapture:
                     def __init__(self):
@@ -161,11 +161,11 @@ class AdvancedPythonEditor {
                     
                     def write_stdout(self, text):
                         self.stdout.write(text)
-                        console.log(text)
+                        print(text, end='')
                     
                     def write_stderr(self, text):
                         self.stderr.write(text)
-                        console.error(text)
+                        print(text, end='', file=sys.__stderr__)
                     
                     def get_stdout(self):
                         return self.stdout.getvalue()
@@ -185,9 +185,17 @@ class AdvancedPythonEditor {
                     old_stderr = sys.stderr
                     
                     try:
-                        sys.stdout = type('', (), {'write': _output_capture.write_stdout, 'flush': lambda: None})()
-                        sys.stderr = type('', (), {'write': _output_capture.write_stderr, 'flush': lambda: None})()
+                        # Redirect stdout and stderr
+                        sys.stdout = type('', (), {
+                            'write': _output_capture.write_stdout, 
+                            'flush': lambda: None
+                        })()
+                        sys.stderr = type('', (), {
+                            'write': _output_capture.write_stderr, 
+                            'flush': lambda: None
+                        })()
                         
+                        # Execute the code
                         exec(code, globals())
                         
                         return {
@@ -196,10 +204,11 @@ class AdvancedPythonEditor {
                             'stderr': _output_capture.get_stderr()
                         }
                     except Exception as e:
+                        error_msg = str(e) + '\\n' + traceback.format_exc()
                         return {
                             'success': False,
                             'stdout': _output_capture.get_stdout(),
-                            'stderr': _output_capture.get_stderr() + str(e) + '\\n' + traceback.format_exc()
+                            'stderr': _output_capture.get_stderr() + error_msg
                         }
                     finally:
                         sys.stdout = old_stdout
@@ -212,13 +221,14 @@ class AdvancedPythonEditor {
                 this.loadingOverlay.style.display = 'none';
                 this.pyodideStatus.textContent = 'Ready';
                 this.runBtn.disabled = false;
-                this.appendOutput('Python environment loaded successfully!\nYou can now run Python code.', 'output-success');
+                this.appendOutput('🐍 Python environment loaded successfully!\n✅ Ready to run Python code\n📝 Press Ctrl+Enter to execute code\n', 'output-success');
             }, 500);
             
         } catch (error) {
+            console.error('Pyodide loading error:', error);
             this.loadingOverlay.style.display = 'none';
             this.pyodideStatus.textContent = 'Error';
-            this.appendOutput(`Failed to load Python environment: ${error.message}`, 'output-error');
+            this.appendOutput(`❌ Failed to load Python environment: ${error.message}\n\nPlease refresh the page to try again.`, 'output-error');
         }
     }
 
@@ -229,13 +239,13 @@ class AdvancedPythonEditor {
 
     async runCode() {
         if (!this.pyodide) {
-            this.appendOutput('Python environment not loaded yet. Please wait...', 'output-error');
+            this.appendOutput('❌ Python environment not loaded yet. Please wait...', 'output-error');
             return;
         }
 
         const code = this.codeInput.value.trim();
         if (!code) {
-            this.appendOutput('No code to run', 'output-error');
+            this.appendOutput('⚠️ No code to run', 'output-warning');
             return;
         }
 
@@ -246,7 +256,10 @@ class AdvancedPythonEditor {
         const startTime = Date.now();
         
         try {
-            const result = this.pyodide.runPython(`run_code_safely("""${code.replace(/"/g, '\\"')}""")`);
+            // Clear previous output
+            this.appendOutput('🚀 Executing code...', 'output-info');
+            
+            const result = this.pyodide.runPython(`run_code_safely("""${code.replace(/"/g, '\\"').replace(/\n/g, '\\n')}""")`);
             
             const executionTime = Date.now() - startTime;
             
@@ -261,19 +274,19 @@ class AdvancedPythonEditor {
                     this.appendOutput(stderr, 'output-warning');
                 }
                 if (!stdout && !stderr) {
-                    this.appendOutput('Code executed successfully (no output)', 'output-success');
+                    this.appendOutput('✅ Code executed successfully (no output)', 'output-success');
                 }
                 
-                this.updateStatus(`Execution completed in ${executionTime}ms`, 'success');
+                this.updateStatus(`✅ Execution completed in ${executionTime}ms`, 'success');
             } else {
                 const stderr = result.get('stderr');
-                this.appendOutput(stderr, 'output-error');
-                this.updateStatus('Execution failed', 'error');
+                this.appendOutput(`❌ Error:\n${stderr}`, 'output-error');
+                this.updateStatus('❌ Execution failed', 'error');
             }
             
         } catch (error) {
-            this.appendOutput(`Runtime Error: ${error.message}`, 'output-error');
-            this.updateStatus('Execution failed', 'error');
+            this.appendOutput(`❌ Runtime Error: ${error.message}`, 'output-error');
+            this.updateStatus('❌ Execution failed', 'error');
         } finally {
             this.runBtn.disabled = false;
             this.stopBtn.disabled = true;
@@ -282,14 +295,15 @@ class AdvancedPythonEditor {
 
     stopExecution() {
         // In a real implementation, this would interrupt the Python execution
-        this.updateStatus('Execution stopped', 'warning');
+        this.updateStatus('⏹️ Execution stopped', 'warning');
         this.runBtn.disabled = false;
         this.stopBtn.disabled = true;
+        this.appendOutput('⏹️ Execution stopped by user', 'output-warning');
     }
 
     debugCode() {
         this.switchOutputPanel('debug');
-        this.appendToPanel('debugOutput', 'Debug mode activated\nSet breakpoints by clicking line numbers', 'output-info');
+        this.appendToPanel('debugOutput', '🐛 Debug mode activated\n📍 Set breakpoints by clicking line numbers', 'output-info');
     }
 
     appendOutput(text, className = '') {
@@ -312,7 +326,7 @@ class AdvancedPythonEditor {
 
     clearConsole() {
         this.output.innerHTML = '';
-        this.updateStatus('Console cleared', 'success');
+        this.updateStatus('🧹 Console cleared', 'success');
     }
 
     downloadOutput() {
@@ -324,15 +338,25 @@ class AdvancedPythonEditor {
         a.download = 'output.txt';
         a.click();
         URL.revokeObjectURL(url);
+        this.updateStatus('💾 Output downloaded', 'success');
     }
 
     // File Management
     newFile() {
         const fileName = prompt('Enter file name:', 'untitled.py');
-        if (fileName) {
-            this.files.set(fileName, '');
-            this.createTab(fileName);
-            this.switchToFile(fileName);
+        if (fileName && fileName.trim()) {
+            const cleanName = fileName.trim();
+            if (!cleanName.endsWith('.py')) {
+                // Auto-add .py extension if not present
+                const finalName = cleanName + '.py';
+                this.files.set(finalName, '');
+                this.createTab(finalName);
+                this.switchToFile(finalName);
+            } else {
+                this.files.set(cleanName, '');
+                this.createTab(cleanName);
+                this.switchToFile(cleanName);
+            }
             this.updateFileTree();
         }
     }
@@ -427,21 +451,21 @@ class AdvancedPythonEditor {
         a.download = this.currentFile;
         a.click();
         URL.revokeObjectURL(url);
-        this.updateStatus(`Saved ${this.currentFile}`, 'success');
+        this.updateStatus(`💾 Saved ${this.currentFile}`, 'success');
     }
 
     saveAsFile() {
         const fileName = prompt('Save as:', this.currentFile);
-        if (fileName) {
+        if (fileName && fileName.trim()) {
             const oldFile = this.currentFile;
-            this.currentFile = fileName;
-            this.files.set(fileName, this.codeInput.value);
+            this.currentFile = fileName.trim();
+            this.files.set(this.currentFile, this.codeInput.value);
             this.saveFile();
             
             // Update tab
             const activeTab = document.querySelector('.tab.active');
-            activeTab.dataset.file = fileName;
-            activeTab.querySelector('.tab-name').textContent = fileName;
+            activeTab.dataset.file = this.currentFile;
+            activeTab.querySelector('.tab-name').textContent = this.currentFile;
             
             this.updateFileTree();
         }
@@ -457,7 +481,7 @@ class AdvancedPythonEditor {
                 this.createTab(file.name);
                 this.switchToFile(file.name);
                 this.updateFileTree();
-                this.updateStatus(`Loaded ${file.name}`, 'success');
+                this.updateStatus(`📂 Loaded ${file.name}`, 'success');
             };
             reader.readAsText(file);
         });
@@ -488,6 +512,7 @@ class AdvancedPythonEditor {
         a.download = this.currentFile.replace('.py', '.html');
         a.click();
         URL.revokeObjectURL(url);
+        this.updateStatus(`📤 Exported ${this.currentFile} as HTML`, 'success');
     }
 
     escapeHtml(text) {
@@ -573,10 +598,8 @@ class AdvancedPythonEditor {
 
     // Advanced Features
     highlightSyntax() {
-        // This would implement real-time syntax highlighting
-        // For now, we'll use a simple approach
-        const code = this.codeInput.value;
-        // Implementation would go here
+        // Basic syntax highlighting would go here
+        // For now, we'll keep it simple
     }
 
     formatCode() {
@@ -588,26 +611,38 @@ class AdvancedPythonEditor {
         
         lines.forEach(line => {
             const trimmed = line.trim();
-            if (trimmed.endsWith(':')) {
-                formattedLines.push('    '.repeat(indentLevel) + trimmed);
-                indentLevel++;
-            } else if (trimmed === '' || trimmed.startsWith('#')) {
+            if (trimmed === '') {
+                formattedLines.push('');
+                return;
+            }
+            
+            if (trimmed.startsWith('#')) {
                 formattedLines.push(trimmed);
-            } else {
-                if (trimmed.startsWith('except') || trimmed.startsWith('elif') || 
-                    trimmed.startsWith('else') || trimmed.startsWith('finally')) {
-                    indentLevel = Math.max(0, indentLevel - 1);
-                    formattedLines.push('    '.repeat(indentLevel) + trimmed);
-                    indentLevel++;
-                } else {
-                    formattedLines.push('    '.repeat(indentLevel) + trimmed);
-                }
+                return;
+            }
+            
+            // Decrease indent for certain keywords
+            if (trimmed.startsWith('except') || trimmed.startsWith('elif') || 
+                trimmed.startsWith('else') || trimmed.startsWith('finally')) {
+                indentLevel = Math.max(0, indentLevel - 1);
+            }
+            
+            formattedLines.push('    '.repeat(indentLevel) + trimmed);
+            
+            // Increase indent after colon
+            if (trimmed.endsWith(':')) {
+                indentLevel++;
+            }
+        });
+        
+        this.codeInput  {
+                indentLevel++;
             }
         });
         
         this.codeInput.value = formattedLines.join('\n');
         this.updateLineNumbers();
-        this.updateStatus('Code formatted', 'success');
+        this.updateStatus('✨ Code formatted', 'success');
     }
 
     // Search and Replace
@@ -641,7 +676,7 @@ class AdvancedPythonEditor {
         const newCode = this.codeInput.value.replaceAll(searchTerm, replaceTerm);
         this.codeInput.value = newCode;
         this.updateLineNumbers();
-        this.updateStatus(`Replaced all occurrences of "${searchTerm}"`, 'success');
+        this.updateStatus(`🔄 Replaced all occurrences of "${searchTerm}"`, 'success');
     }
 
     highlightSearchResults() {
@@ -656,32 +691,32 @@ class AdvancedPythonEditor {
         if (!packageName) return;
         
         if (!this.pyodide) {
-            this.appendOutput('Python environment not loaded yet', 'output-error');
+            this.appendOutput('❌ Python environment not loaded yet', 'output-error');
             return;
         }
         
         try {
-            this.updateStatus(`Installing ${packageName}...`, 'loading');
+            this.updateStatus(`📦 Installing ${packageName}...`, 'loading');
             await this.pyodide.loadPackage([packageName]);
             
             // Add to installed packages list
             const packageDiv = document.createElement('div');
-            packageDiv.textContent = `${packageName} - latest`;
+            packageDiv.textContent = `✅ ${packageName} - latest`;
             this.installedPackages.appendChild(packageDiv);
             
             this.packageInput.value = '';
-            this.updateStatus(`${packageName} installed successfully`, 'success');
+            this.updateStatus(`✅ ${packageName} installed successfully`, 'success');
             
         } catch (error) {
-            this.updateStatus(`Failed to install ${packageName}`, 'error');
-            this.appendOutput(`Package installation error: ${error.message}`, 'output-error');
+            this.updateStatus(`❌ Failed to install ${packageName}`, 'error');
+            this.appendOutput(`📦 Package installation error: ${error.message}`, 'output-error');
         }
     }
 
     // Terminal functionality
     executeTerminalCommand(command) {
         if (!this.pyodide) {
-            this.appendToPanel('terminalOutput', 'Python environment not loaded', 'output-error');
+            this.appendToPanel('terminalOutput', '❌ Python environment not loaded', 'output-error');
             return;
         }
 
@@ -693,7 +728,7 @@ class AdvancedPythonEditor {
                 this.appendToPanel('terminalOutput', String(result), 'output-success');
             }
         } catch (error) {
-            this.appendToPanel('terminalOutput', error.message, 'output-error');
+            this.appendToPanel('terminalOutput', `❌ ${error.message}`, 'output-error');
         }
     }
 
@@ -726,7 +761,7 @@ class AdvancedPythonEditor {
         
         document.body.className = `theme-${this.settings.theme}`;
         this.saveSettings();
-        this.updateStatus(`Switched to ${this.settings.theme} theme`, 'success');
+        this.updateStatus(`🎨 Switched to ${this.settings.theme} theme`, 'success');
     }
 
     toggleMinimap() {
@@ -932,21 +967,17 @@ class AdvancedPythonEditor {
     }
 
     hasUnsavedChanges(fileName = null) {
-        const file = fileName || this.currentFile;
-        const currentContent = fileName ? this.files.get(fileName) : this.codeInput.value;
         // In a real implementation, this would check against saved state
         return false;
     }
 
     autoSave() {
         if (this.settings.autoSave) {
-            // Auto-save logic would go here
             this.saveCurrentFile();
         }
     }
 
     handleResize() {
-        // Handle window resize events
         this.syncScroll();
     }
 
